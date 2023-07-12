@@ -58,12 +58,12 @@ bypassReversibeMoves g@(Game ls rs) = Game (bypassReversibeMoves' g ls reverseLe
 reverseLeftMoveIfPossible :: Game -> Game -> Maybe [Game]
 reverseLeftMoveIfPossible m g = 
   let maybeMr = find (\mr -> mr <= g) (rightMoves m)
-  in fmap leftMoves maybeMr
+  in leftMoves <$> maybeMr
 
 reverseRightMoveIfPossible :: Game -> Game -> Maybe [Game]
 reverseRightMoveIfPossible m g = 
   let maybeMl = find (\ml -> ml >= g) (leftMoves m)
-  in fmap rightMoves maybeMl
+  in rightMoves <$> maybeMl
 
 bypassReversibeMoves' :: Game -> [Game] -> (Game -> Game -> Maybe [Game]) -> [Game]
 bypassReversibeMoves' g ms reverseFunction = concat $ map (\m -> replacementFor m) ms
@@ -96,6 +96,11 @@ up = Game [zero] [star]
 down = Game [star] [zero]
 doubleup = up + up
 
+nim :: Int -> Game
+nim 0 = zero
+nim n = Game xs xs
+  where xs = map nim [0..(n-1)]
+
 instance Show Game where
   show = show' . simplify
 
@@ -103,11 +108,17 @@ instance Show Game where
 show' g = fromJust $ head $ dropWhile isNothing candidates
   where 
     candidates = [
-      fmap show (toInt g), -- Is it an integer?
-      fmap showArrowNotation (arrowNotationIndex g), -- Is it n.↑?
-      fmap showArrowStarNotation (arrowStarNotationIndex g), -- Is it n.↑ + *?
+      show <$> toInt g, -- Is it an integer?
+      showNimber <$> nimIndex g, -- Is it a nimber?
+      showArrowNotation <$> arrowNotationIndex g, -- Is it n.↑?
+      showArrowStarNotation <$> arrowStarNotationIndex g, -- Is it n.↑ + *?
       fmap (\n -> (show n) ++ "*") (toInt $ simplify $ g + star), -- Is it an integer + *?
       Just (showGeneric g)]
+
+showNimber :: Int -> String
+showNimber 0 = "0"
+showNimber 1 = "*"
+showNimber n = "*" ++ (show n)
 
 showArrowNotation :: Int -> String
 showArrowNotation (-2) = "⇓"
@@ -134,30 +145,38 @@ showGeneric (Game ls rs) = "{ " ++ (showMoves ls) ++ " | " ++ (showMoves rs) ++ 
 
 toInt :: Game -> Maybe Int
 toInt g
-  | g < 0 = fmap negate (toInt (-g))
+  | g < 0 = negate <$> (toInt (-g))
   | g == 0 = Just 0
-toInt (Game [gl] []) = fmap (+1) (toInt gl)
+toInt (Game [gl] []) = (+1) <$> (toInt gl)
 toInt _ = Nothing
+
+-- If G is *n, what is that n?
+nimIndex :: Game -> Maybe Int
+nimIndex (Game ls rs)
+  | ls /= rs = Nothing
+  | any isNothing ns = Nothing
+  | otherwise = mex <$> sequence ns
+  where ns = map nimIndex ls
 
 -- If G is n.↑, what is that n?
 arrowNotationIndex :: Game -> Maybe Int
 arrowNotationIndex g
   | g == zero = Just 0
-  | g < 0 = fmap negate (arrowNotationIndex (-g))
+  | g < 0 = negate <$> (arrowNotationIndex (-g))
 arrowNotationIndex (Game [gl] [gr])
   | gl /= zero = Nothing
-  | otherwise = fmap (+1) (arrowStarNotationIndex gr)
+  | otherwise = (+1) <$> (arrowStarNotationIndex gr)
 arrowNotationIndex _ = Nothing
 
 -- If G is n.↑ + *, what is that n?
 arrowStarNotationIndex :: Game -> Maybe Int
 arrowStarNotationIndex g
   | g == up + star = Just 1
-  | g < star = fmap negate (arrowStarNotationIndex (-g))
+  | g < star = negate <$> (arrowStarNotationIndex (-g))
 arrowStarNotationIndex (Game [gl] [gr])
   | gl /= zero = Nothing
   | gr == zero = Just 0
-  | otherwise = fmap (+1) (arrowNotationIndex gr)
+  | otherwise = (+1) <$> (arrowNotationIndex gr)
 arrowStarNotationIndex _ = Nothing
 
 
@@ -201,3 +220,6 @@ filterIfAnotherElementSatisfies' passed f (x:xs) =
   if any (\y -> f y x) (passed ++ xs)
     then filterIfAnotherElementSatisfies' passed f xs
     else x : filterIfAnotherElementSatisfies' (x:passed) f xs
+
+mex :: [Int] -> Int
+mex ns = fromJust $ find (\n -> n `notElem` ns) [0..]
