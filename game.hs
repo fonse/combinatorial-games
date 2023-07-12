@@ -1,4 +1,5 @@
 import Data.List
+import Data.Maybe
 
 data Game = Game [Game] [Game]
 
@@ -47,7 +48,7 @@ simplify g
   where h = simplify' g
 
 simplify' :: Game -> Game
-simplify' = deleteDominatedStrategies . bypassReversibeMoves
+simplify' (Game ls rs) = deleteDominatedStrategies . bypassReversibeMoves $ Game (map simplify ls) (map simplify rs)
 
 -- If any Left option M of G has itself a Right option Mᴿ <= G, then it will not affect the value of G if we replace M as a Left option of G by all the Left options of that Mᴿ
 -- If any Right option M of G has itself a Left option Mᴸ >= G, then it will not affect the value of G if we replace M as a Right option of G by all the Right options of that Mᴸ
@@ -96,16 +97,68 @@ down = Game [star] [zero]
 doubleup = up + up
 
 instance Show Game where
-  show g
-    | g == zero = "0"
-    | g == star = "*"
-    | g == up = "↑"
-    | g == down = "↓"
-    | g == doubleup = "⇑"
-    | otherwise = show' $ simplify g
+  show = show' . simplify
 
-show' (Game ls rs) = "{ " ++ (showMoves ls) ++ " | " ++ (showMoves rs) ++ " }"
+-- G needs to be in its simplifed form
+show' g = fromJust $ head $ dropWhile isNothing candidates
+  where 
+    candidates = [
+      fmap show (toInt g), -- Is it an integer?
+      fmap showArrowNotation (arrowNotationIndex g), -- Is it n.↑?
+      fmap showArrowStarNotation (arrowStarNotationIndex g), -- Is it n.↑ + *?
+      fmap (\n -> (show n) ++ "*") (toInt $ simplify $ g + star), -- Is it an integer + *?
+      Just (showGeneric g)]
+
+showArrowNotation :: Int -> String
+showArrowNotation (-2) = "⇓"
+showArrowNotation (-1) = "↓"
+showArrowNotation 0 = "0"
+showArrowNotation 1 = "↑"
+showArrowNotation 2 = "⇑"
+showArrowNotation n
+  | n > 0 = (show n) ++ ".↑"
+  | otherwise = (show n) ++ ".↓"
+
+showArrowStarNotation :: Int -> String
+showArrowStarNotation (-2) = "⇓*"
+showArrowStarNotation (-1) = "↓*"
+showArrowStarNotation 0 = "*"
+showArrowStarNotation 1 = "↑*"
+showArrowStarNotation 2 = "⇑*"
+showArrowStarNotation n
+  | n > 0 = (show n) ++ ".↑+*"
+  | otherwise = (show n) ++ ".↓+*"
+
+showGeneric (Game ls rs) = "{ " ++ (showMoves ls) ++ " | " ++ (showMoves rs) ++ " }"
   where showMoves gs = intercalate " " (map show gs)
+
+toInt :: Game -> Maybe Int
+toInt g
+  | g < 0 = fmap negate (toInt (-g))
+  | g == 0 = Just 0
+toInt (Game [gl] []) = fmap (+1) (toInt gl)
+toInt _ = Nothing
+
+-- If G is n.↑, what is that n?
+arrowNotationIndex :: Game -> Maybe Int
+arrowNotationIndex g
+  | g == zero = Just 0
+  | g < 0 = fmap negate (arrowNotationIndex (-g))
+arrowNotationIndex (Game [gl] [gr])
+  | gl /= zero = Nothing
+  | otherwise = fmap (+1) (arrowStarNotationIndex gr)
+arrowNotationIndex _ = Nothing
+
+-- If G is n.↑ + *, what is that n?
+arrowStarNotationIndex :: Game -> Maybe Int
+arrowStarNotationIndex g
+  | g == up + star = Just 1
+  | g < star = fmap negate (arrowStarNotationIndex (-g))
+arrowStarNotationIndex (Game [gl] [gr])
+  | gl /= zero = Nothing
+  | gr == zero = Just 0
+  | otherwise = fmap (+1) (arrowNotationIndex gr)
+arrowStarNotationIndex _ = Nothing
 
 
 --------------------------
