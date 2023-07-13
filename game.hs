@@ -1,3 +1,5 @@
+module Game where
+
 import Data.List
 import Data.Maybe
 
