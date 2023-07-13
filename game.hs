@@ -2,6 +2,7 @@ module Game where
 
 import Data.List
 import Data.Maybe
+import Data.Ratio
 
 data Game = Game [Game] [Game]
 
@@ -110,12 +111,17 @@ instance Show Game where
 show' g = fromJust $ head $ dropWhile isNothing candidates
   where 
     candidates = [
-      show <$> toInt g, -- Is it an integer?
+      showRational <$> toMaybeRational g, -- Is it a number?
       showNimber <$> nimIndex g, -- Is it a nimber?
       showArrowNotation <$> arrowNotationIndex g, -- Is it n.↑?
       showArrowStarNotation <$> arrowStarNotationIndex g, -- Is it n.↑ + *?
-      fmap (\n -> (show n) ++ "*") (toInt $ simplify $ g + star), -- Is it an integer + *?
+      fmap (\n -> (showRational n) ++ "*") (toMaybeRational $ simplify $ g + star), -- Is it a number + *?
       Just (showGeneric g)]
+
+showRational :: Rational -> String
+showRational x
+  | denominator x == 1 = show (numerator x)
+  | otherwise = show (numerator x) ++ "/" ++ show (denominator x)
 
 showNimber :: Int -> String
 showNimber 0 = "0"
@@ -145,12 +151,19 @@ showArrowStarNotation n
 showGeneric (Game ls rs) = "{ " ++ (showMoves ls) ++ " | " ++ (showMoves rs) ++ " }"
   where showMoves gs = intercalate " " (map show gs)
 
-toInt :: Game -> Maybe Int
-toInt g
-  | g < 0 = negate <$> (toInt (-g))
-  | g == 0 = Just 0
-toInt (Game [gl] []) = (+1) <$> (toInt gl)
-toInt _ = Nothing
+toMaybeRational :: Game -> Maybe Rational
+toMaybeRational (Game [] []) = Just 0
+toMaybeRational (Game ls rs)
+  | any isNothing (maybeLefts ++ maybeRights) = Nothing
+  | any (\l -> any (\r -> l >= r) rs) ls = Nothing
+  | maybeRights == [] = (+1) <$> maxLeft
+  | maybeLefts == [] = (\n -> n-1) <$> minRight
+  | otherwise = maxLeft >>= \a -> minRight >>= \b -> return ((a + b) / 2)
+  where
+    maybeLefts = toMaybeRational <$> ls
+    maybeRights = toMaybeRational <$> rs
+    maxLeft = maximum <$> sequence maybeLefts
+    minRight = minimum <$> sequence maybeRights
 
 -- If G is *n, what is that n?
 nimIndex :: Game -> Maybe Int
