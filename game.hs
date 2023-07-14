@@ -55,14 +55,10 @@ bypassReversibeMoves :: Game -> Game
 bypassReversibeMoves g@(Game ls rs) = Game (bypassReversibeMoves' g ls reverseLeftMoveIfPossible) (bypassReversibeMoves' g rs reverseRightMoveIfPossible)
 
 reverseLeftMoveIfPossible :: Game -> Game -> Maybe [Game]
-reverseLeftMoveIfPossible m g = 
-  let maybeMr = find (\mr -> mr <= g) (rightMoves m)
-  in leftMoves <$> maybeMr
+reverseLeftMoveIfPossible m g = leftMoves <$> find (\mr -> mr <= g) (rightMoves m)
 
 reverseRightMoveIfPossible :: Game -> Game -> Maybe [Game]
-reverseRightMoveIfPossible m g = 
-  let maybeMl = find (\ml -> ml >= g) (leftMoves m)
-  in rightMoves <$> maybeMl
+reverseRightMoveIfPossible m g = rightMoves <$> find (\ml -> ml >= g) (leftMoves m)
 
 bypassReversibeMoves' :: Game -> [Game] -> (Game -> Game -> Maybe [Game]) -> [Game]
 bypassReversibeMoves' g ms reverseFunction = ms >>= \m -> fromMaybe [m] (reverseFunction m g)
