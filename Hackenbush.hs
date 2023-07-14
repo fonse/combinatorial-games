@@ -17,9 +17,9 @@ zippedRemovals xs = zip xs $ conditionalRemovals (const True) xs
 
 -- Positions after cutting exactly one branch of a color in the given list
 movesforColors :: [Color] -> HackenbushTree -> [HackenbushTree]
-movesforColors colors bs = rootCuts ++ (zippedRemovals bs >>= subtreeCuts) 
+movesforColors colors bs = rootCuts ++ (zippedRemovals bs >>= subtreeCuts)
   where
-    rootCuts = conditionalRemovals (\b -> (color b) `elem` colors) bs
+    rootCuts = conditionalRemovals (\b -> color b `elem` colors) bs
     subtreeCuts (b,bs) = map (\t -> Branch (color b) t : bs) (movesforColors colors (subtree b)) -- Fix here
 
 fromHackenbush :: HackenbushTree -> Game

@@ -10,9 +10,9 @@ data Game = Game { leftMoves :: [Game], rightMoves :: [Game] }
 ---- Euqality and Order ----
 ----------------------------
 -- G >= H iff no Gᴿ <= H and H <= no Gᴸ
-g `gte` h = none (\gr -> gr `lte` h) (rightMoves g) && none (\hl -> g `lte` hl) (leftMoves h)
-  where none f = not . (any f)
-  
+g `gte` h = none (`lte` h) (rightMoves g) && none (g `lte`) (leftMoves h)
+  where none f = not . any f
+
 g `lte` h = h `gte` g
 
 instance Eq Game where
@@ -25,8 +25,8 @@ instance Ord Game where
   g < h = g <= h && g /= h
 
 -- Structural Equality
-class StructuralEq a where  
-  (===) :: a -> a -> Bool  
+class StructuralEq a where
+  (===) :: a -> a -> Bool
 
 instance (StructuralEq a) => StructuralEq [a] where
   [] === [] = True
@@ -55,27 +55,23 @@ bypassReversibeMoves :: Game -> Game
 bypassReversibeMoves g@(Game ls rs) = Game (bypassReversibeMoves' g ls reverseLeftMoveIfPossible) (bypassReversibeMoves' g rs reverseRightMoveIfPossible)
 
 reverseLeftMoveIfPossible :: Game -> Game -> Maybe [Game]
-reverseLeftMoveIfPossible m g = leftMoves <$> find (\mr -> mr <= g) (rightMoves m)
+reverseLeftMoveIfPossible m g = leftMoves <$> find (<= g) (rightMoves m)
 
 reverseRightMoveIfPossible :: Game -> Game -> Maybe [Game]
-reverseRightMoveIfPossible m g = rightMoves <$> find (\ml -> ml >= g) (leftMoves m)
+reverseRightMoveIfPossible m g = rightMoves <$> find (>= g) (leftMoves m)
 
 bypassReversibeMoves' :: Game -> [Game] -> (Game -> Game -> Maybe [Game]) -> [Game]
 bypassReversibeMoves' g ms reverseFunction = ms >>= \m -> fromMaybe [m] (reverseFunction m g)
-      
+
 -- It won't affect the value of G if we delete dominated options but retain the options that dominated them
 deleteDominatedStrategies :: Game -> Game
 deleteDominatedStrategies (Game ls rs) = Game (removeSmaller ls) (removeLarger rs)
 
--- Like filter but the condition compares every other element in the list to the element being analyzed. If any satisfies, the element is removed.
-filterIfAnotherElementSatisfies :: (a -> a -> Bool) -> [a] -> [a]
-filterIfAnotherElementSatisfies = filterIfAnotherElementSatisfies' []
-
 removeSmaller :: [Game] -> [Game]
-removeSmaller = filterIfAnotherElementSatisfies (>=)
+removeSmaller = filterIfAnotherElementSatisfies (<=)
 
 removeLarger :: [Game] -> [Game]
-removeLarger = filterIfAnotherElementSatisfies (<=)
+removeLarger = filterIfAnotherElementSatisfies (>=)
 
 
 -------------------------------
@@ -96,13 +92,13 @@ instance Show Game where
 
 -- G needs to be in its simplifed form
 show' g = fromJust $ head $ dropWhile isNothing candidates
-  where 
+  where
     candidates = [
       showRational <$> toMaybeRational g, -- Is it a number?
       showNimber <$> nimIndex g, -- Is it a nimber?
       showArrowNotation <$> arrowNotationIndex g, -- Is it n.↑?
       showArrowStarNotation <$> arrowStarNotationIndex g, -- Is it n.↑ + *?
-      fmap (\n -> (showRational n) ++ "*") (toMaybeRational $ simplify $ g + star), -- Is it a number + *?
+      fmap (\n -> showRational n ++ "*") (toMaybeRational $ simplify $ g + star), -- Is it a number + *?
       Just (showGeneric g)]
 
 showRational :: Rational -> String
@@ -113,7 +109,7 @@ showRational x
 showNimber :: Int -> String
 showNimber 0 = "0"
 showNimber 1 = "*"
-showNimber n = "*" ++ (show n)
+showNimber n = "*" ++ show n
 
 showArrowNotation :: Int -> String
 showArrowNotation (-2) = "⇓"
@@ -122,8 +118,8 @@ showArrowNotation 0 = "0"
 showArrowNotation 1 = "↑"
 showArrowNotation 2 = "⇑"
 showArrowNotation n
-  | n > 0 = (show n) ++ ".↑"
-  | otherwise = (show n) ++ ".↓"
+  | n > 0 = show n ++ ".↑"
+  | otherwise = show n ++ ".↓"
 
 showArrowStarNotation :: Int -> String
 showArrowStarNotation (-2) = "⇓*"
@@ -132,19 +128,19 @@ showArrowStarNotation 0 = "*"
 showArrowStarNotation 1 = "↑*"
 showArrowStarNotation 2 = "⇑*"
 showArrowStarNotation n
-  | n > 0 = (show n) ++ ".↑+*"
-  | otherwise = (show n) ++ ".↓+*"
+  | n > 0 = show n ++ ".↑+*"
+  | otherwise = show n ++ ".↓+*"
 
-showGeneric (Game ls rs) = "{ " ++ (showMoves ls) ++ " | " ++ (showMoves rs) ++ " }"
-  where showMoves gs = intercalate " " (show <$> gs)
+showGeneric (Game ls rs) = "{ " ++ showMoves ls ++ " | " ++ showMoves rs ++ " }"
+  where showMoves gs = unwords (show <$> gs)
 
 toMaybeRational :: Game -> Maybe Rational
 toMaybeRational (Game [] []) = Just 0
 toMaybeRational (Game ls rs)
   | any isNothing (maybeLefts ++ maybeRights) = Nothing
-  | any (\l -> any (\r -> l >= r) rs) ls = Nothing
-  | maybeRights == [] = (+1) <$> maxLeft
-  | maybeLefts == [] = (\n -> n-1) <$> minRight
+  | any (\l -> any (l >=) rs) ls = Nothing
+  | null maybeRights = (+1) <$> maxLeft
+  | null maybeLefts = (\n -> n-1) <$> minRight
   | otherwise = maxLeft >>= \a -> minRight >>= \b -> return ((a + b) / 2)
   where
     maybeLefts = toMaybeRational <$> ls
@@ -164,7 +160,7 @@ nimIndex (Game ls rs)
 arrowNotationIndex :: Game -> Maybe Int
 arrowNotationIndex g
   | g == zero = Just 0
-  | g < 0 = negate <$> (arrowNotationIndex (-g))
+  | g < 0 = negate <$> arrowNotationIndex (-g)
 arrowNotationIndex (Game [gl] [gr])
   | gl /= zero = Nothing
   | otherwise = arrowStarNotationIndex gr >>= \n -> if n >= 0 then Just (n+1) else Nothing
@@ -174,7 +170,7 @@ arrowNotationIndex _ = Nothing
 arrowStarNotationIndex :: Game -> Maybe Int
 arrowStarNotationIndex g
   | g == up + star = Just 1
-  | g < star = negate <$> (arrowStarNotationIndex (-g))
+  | g < star = negate <$> arrowStarNotationIndex (-g)
 arrowStarNotationIndex (Game [gl] [gr])
   | gl /= zero = Nothing
   | gr == zero = Just 0
@@ -208,20 +204,24 @@ instance Num Game where
 
   abs g = g * signum g
   signum g
-    | g == zero = zero
-    | g > zero  = fromInteger 1
-    | otherwise = fromInteger (-1)
+    | g == zero = 0
+    | g > zero  = 1
+    | otherwise = -1
 
 
 -----------------------
 ---- Aux functions ----
 -----------------------
+-- Like filter but the condition compares the element being analyzed to every other element in the list. If any satisfies, the element is removed.
+filterIfAnotherElementSatisfies :: (a -> a -> Bool) -> [a] -> [a]
+filterIfAnotherElementSatisfies = filterIfAnotherElementSatisfies' []
+
 filterIfAnotherElementSatisfies' :: [a] -> (a -> a -> Bool) -> [a] -> [a]
 filterIfAnotherElementSatisfies' _ _ [] = []
-filterIfAnotherElementSatisfies' passed f (x:xs) = 
-  if any (\y -> f y x) (passed ++ xs)
+filterIfAnotherElementSatisfies' passed f (x:xs) =
+  if any (f x) (passed ++ xs)
     then filterIfAnotherElementSatisfies' passed f xs
     else x : filterIfAnotherElementSatisfies' (x:passed) f xs
 
 mex :: [Int] -> Int
-mex ns = fromJust $ find (\n -> n `notElem` ns) [0..]
+mex ns = fromJust $ find (`notElem` ns) [0..]
