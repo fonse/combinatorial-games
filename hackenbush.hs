@@ -12,25 +12,18 @@ conditionalRemovals f (a:as)
   | otherwise = otherRemovals
   where otherRemovals = (a:) <$> conditionalRemovals f as
 
+zippedRemovals :: [a] -> [(a,[a])]
+zippedRemovals xs = zip xs $ conditionalRemovals (const True) xs
+
 -- Positions after cutting exactly one branch of a color in the given list
 movesforColors :: [Color] -> HackenbushTree -> [HackenbushTree]
-movesforColors colors bs = rootCuts ++ (bs >>= \b -> subtreeCuts b) 
+movesforColors colors bs = rootCuts ++ (zippedRemovals bs >>= subtreeCuts) 
   where
     rootCuts = conditionalRemovals (\b -> (color b) `elem` colors) bs
-    subtreeCuts b = map (\t -> [Branch (color b) t]) (movesforColors colors (subtree b))
+    subtreeCuts (b,bs) = map (\t -> Branch (color b) t : bs) (movesforColors colors (subtree b)) -- Fix here
 
 fromHackenbush :: HackenbushTree -> Game
 fromHackenbush t = Game left right
   where
     left = fromHackenbush <$> movesforColors [Blue, Green] t
     right = fromHackenbush <$> movesforColors [Red, Green] t
-
--- Helpful for testing
-readStack :: [Color] -> HackenbushTree
-readStack [] = []
-readStack (x:xs) = [Branch x (readStack xs)]
-
-readColor :: Char -> Color
-readColor 'b' = Blue
-readColor 'r' = Red
-readColor 'g' = Green
