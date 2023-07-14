@@ -4,13 +4,13 @@ import Data.List
 import Data.Maybe
 import Data.Ratio
 
-data Game = Game { leftMoves :: [Game], rightMoves :: [Game] }
+data Game = Game { left :: [Game], right :: [Game] }
 
 ----------------------------
 ---- Euqality and Order ----
 ----------------------------
 -- G >= H iff no Gᴿ <= H and H <= no Gᴸ
-g `gte` h = none (`lte` h) (rightMoves g) && none (g `lte`) (leftMoves h)
+g `gte` h = none (`lte` h) (right g) && none (g `lte`) (left h)
   where none f = not . any f
 
 g `lte` h = h `gte` g
@@ -36,7 +36,6 @@ instance (StructuralEq a) => StructuralEq [a] where
 instance StructuralEq Game where
   (Game gl gr) === (Game hl hr) = gl === hl && gr === hr
 
-
 ---------------------------
 ---- Simplifying Games ----
 ---------------------------
@@ -55,10 +54,10 @@ bypassReversibeMoves :: Game -> Game
 bypassReversibeMoves g@(Game ls rs) = Game (bypassReversibeMoves' g ls reverseLeftMoveIfPossible) (bypassReversibeMoves' g rs reverseRightMoveIfPossible)
 
 reverseLeftMoveIfPossible :: Game -> Game -> Maybe [Game]
-reverseLeftMoveIfPossible m g = leftMoves <$> find (<= g) (rightMoves m)
+reverseLeftMoveIfPossible m g = left <$> find (<= g) (right m)
 
 reverseRightMoveIfPossible :: Game -> Game -> Maybe [Game]
-reverseRightMoveIfPossible m g = rightMoves <$> find (>= g) (leftMoves m)
+reverseRightMoveIfPossible m g = right <$> find (>= g) (left m)
 
 bypassReversibeMoves' :: Game -> [Game] -> (Game -> Game -> Maybe [Game]) -> [Game]
 bypassReversibeMoves' g ms reverseFunction = ms >>= \m -> fromMaybe [m] (reverseFunction m g)
@@ -72,7 +71,6 @@ removeSmaller = filterIfAnotherElementSatisfies (<=)
 
 removeLarger :: [Game] -> [Game]
 removeLarger = filterIfAnotherElementSatisfies (>=)
-
 
 -------------------------------
 ---- Useful Games and Show ----
@@ -177,15 +175,14 @@ arrowStarNotationIndex (Game [gl] [gr])
   | otherwise = arrowNotationIndex gr >>= \n -> if n >= 0 then Just (n+1) else Nothing
 arrowStarNotationIndex _ = Nothing
 
-
 --------------------------
 ---- Num for Addition ----
 --------------------------
 instance Num Game where
-  g + h = simplify $ Game left right
+  g + h = simplify $ Game ls rs
     where
-      left  = map (+h) (leftMoves g) ++ map (+g) (leftMoves h)
-      right = map (+h) (rightMoves g) ++ map (+g) (rightMoves h)
+      ls  = map (+h) (left g) ++ map (+g) (left h)
+      rs = map (+h) (right g) ++ map (+g) (right h)
 
   negate (Game ls rs) = Game (negate <$> rs) (negate <$> ls)
 
@@ -197,10 +194,10 @@ instance Num Game where
   -- These only make sense for games which are numbers, but are required by Num
   g * h = Game (left1++left2) (right1++right2)
     where
-      left1   = [ gl*h + g*hl - gl*hl | gl <- leftMoves g,  hl <- leftMoves h  ]
-      left2   = [ gr*h + g*hr - gr*hr | gr <- rightMoves g, hr <- rightMoves h ]
-      right1  = [ gl*h + g*hr - gl*hr | gl <- leftMoves g,  hr <- rightMoves h ]
-      right2  = [ gr*h + g*hl - gr*hl | gr <- rightMoves g, hl <- leftMoves h  ]
+      left1   = [ gl*h + g*hl - gl*hl | gl <- left g,  hl <- left h  ]
+      left2   = [ gr*h + g*hr - gr*hr | gr <- right g, hr <- right h ]
+      right1  = [ gl*h + g*hr - gl*hr | gl <- left g,  hr <- right h ]
+      right2  = [ gr*h + g*hl - gr*hl | gr <- right g, hl <- left h  ]
 
   abs g = g * signum g
   signum g
@@ -208,6 +205,15 @@ instance Num Game where
     | g > zero  = 1
     | otherwise = -1
 
+---------------------------------
+---- Combinatorial Typeclass ----
+---------------------------------
+class Combinatorial a where
+  leftMoves :: a -> [a]
+  rightMoves :: a -> [a]
+  toGame :: a -> Game
+  toGame x = Game (toGame <$> leftMoves x) (toGame <$> rightMoves x)
+  
 
 -----------------------
 ---- Aux functions ----
