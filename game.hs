@@ -180,7 +180,7 @@ arrowNotationIndex g
   | g < 0 = negate <$> (arrowNotationIndex (-g))
 arrowNotationIndex (Game [gl] [gr])
   | gl /= zero = Nothing
-  | otherwise = (+1) <$> (arrowStarNotationIndex gr)
+  | otherwise = arrowStarNotationIndex gr >>= \n -> if n >= 0 then Just (n+1) else Nothing
 arrowNotationIndex _ = Nothing
 
 -- If G is n.↑ + *, what is that n?
@@ -191,7 +191,7 @@ arrowStarNotationIndex g
 arrowStarNotationIndex (Game [gl] [gr])
   | gl /= zero = Nothing
   | gr == zero = Just 0
-  | otherwise = (+1) <$> (arrowNotationIndex gr)
+  | otherwise = arrowNotationIndex gr >>= \n -> if n >= 0 then Just (n+1) else Nothing
 arrowStarNotationIndex _ = Nothing
 
 
