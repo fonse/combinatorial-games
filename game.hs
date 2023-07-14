@@ -51,7 +51,7 @@ simplify g
   where h = simplify' g
 
 simplify' :: Game -> Game
-simplify' (Game ls rs) = deleteDominatedStrategies . bypassReversibeMoves $ Game (map simplify ls) (map simplify rs)
+simplify' (Game ls rs) = deleteDominatedStrategies . bypassReversibeMoves $ Game (simplify <$> ls) (simplify <$> rs)
 
 -- If any Left option M of G has itself a Right option Mᴿ <= G, then it will not affect the value of G if we replace M as a Left option of G by all the Left options of that Mᴿ
 -- If any Right option M of G has itself a Left option Mᴸ >= G, then it will not affect the value of G if we replace M as a Right option of G by all the Right options of that Mᴸ
@@ -69,11 +69,7 @@ reverseRightMoveIfPossible m g =
   in rightMoves <$> maybeMl
 
 bypassReversibeMoves' :: Game -> [Game] -> (Game -> Game -> Maybe [Game]) -> [Game]
-bypassReversibeMoves' g ms reverseFunction = concat $ map (\m -> replacementFor m) ms
-  where 
-    replacementFor m = case (reverseFunction m g) of
-      (Just gs) -> gs
-      Nothing -> [m]
+bypassReversibeMoves' g ms reverseFunction = ms >>= \m -> fromMaybe [m] (reverseFunction m g)
       
 -- It won't affect the value of G if we delete dominated options but retain the options that dominated them
 deleteDominatedStrategies :: Game -> Game
@@ -97,12 +93,11 @@ zero = Game [] []
 star = Game [zero] [zero]
 up = Game [zero] [star]
 down = Game [star] [zero]
-doubleup = up + up
 
 nim :: Int -> Game
 nim 0 = zero
 nim n = Game xs xs
-  where xs = map nim [0..(n-1)]
+  where xs = nim <$> [0..(n-1)]
 
 instance Show Game where
   show = show' . simplify
@@ -149,7 +144,7 @@ showArrowStarNotation n
   | otherwise = (show n) ++ ".↓+*"
 
 showGeneric (Game ls rs) = "{ " ++ (showMoves ls) ++ " | " ++ (showMoves rs) ++ " }"
-  where showMoves gs = intercalate " " (map show gs)
+  where showMoves gs = intercalate " " (show <$> gs)
 
 toMaybeRational :: Game -> Maybe Rational
 toMaybeRational (Game [] []) = Just 0
@@ -171,7 +166,7 @@ nimIndex (Game ls rs)
   | ls /= rs = Nothing
   | any isNothing ns = Nothing
   | otherwise = mex <$> sequence ns
-  where ns = map nimIndex ls
+  where ns = nimIndex <$> ls
 
 -- If G is n.↑, what is that n?
 arrowNotationIndex :: Game -> Maybe Int
@@ -204,7 +199,7 @@ instance Num Game where
       left  = map (+h) (leftMoves g) ++ map (+g) (leftMoves h)
       right = map (+h) (rightMoves g) ++ map (+g) (rightMoves h)
 
-  negate (Game ls rs) = Game (map negate rs) (map negate ls)
+  negate (Game ls rs) = Game (negate <$> rs) (negate <$> ls)
 
   fromInteger n
     | n == 0 = zero
