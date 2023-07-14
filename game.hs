@@ -4,11 +4,7 @@ import Data.List
 import Data.Maybe
 import Data.Ratio
 
-data Game = Game [Game] [Game]
-
-leftMoves  (Game ls _) = ls
-rightMoves (Game _ rs) = rs
-
+data Game = Game { leftMoves :: [Game], rightMoves :: [Game] }
 
 ----------------------------
 ---- Euqality and Order ----
