@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use <" #-}
+{-# HLINT ignore "Use >" #-}
 module Game where
 
 import Data.List
@@ -23,6 +26,11 @@ instance Ord Game where
   (>=) = gte
   g > h = g >= h && g /= h
   g < h = g <= h && g /= h
+
+-- Fuzzy operator
+x ||| y = not (x <= y) && not (y >= x)
+x |> y = x > y || x ||| y
+x <| y = x < y || x ||| y
 
 -- Structural Equality
 class StructuralEq a where
@@ -192,7 +200,7 @@ instance Num Game where
     | otherwise = Game [] [fromInteger (n+1)]
 
   -- These only make sense for games which are numbers, but are required by Num
-  g * h = Game (left1++left2) (right1++right2)
+  g * h = simplify $ Game (left1++left2) (right1++right2)
     where
       left1   = [ gl*h + g*hl - gl*hl | gl <- left g,  hl <- left h  ]
       left2   = [ gr*h + g*hr - gr*hr | gr <- right g, hr <- right h ]
