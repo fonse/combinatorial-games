@@ -194,7 +194,7 @@ arrowStarNotationIndex _ = Nothing
 ---- Num for Addition ----
 --------------------------
 instance Num Game where
-  g + h = Game left right
+  g + h = simplify $ Game left right
     where
       left  = map (+h) (leftMoves g) ++ map (+g) (leftMoves h)
       right = map (+h) (rightMoves g) ++ map (+g) (rightMoves h)
