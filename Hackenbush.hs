@@ -1,5 +1,5 @@
 import Game
-import Data.List
+import Util ( choose )
 
 data Color = Blue | Red | Green deriving (Show, Eq)
 data Branch = Branch { color :: Color, subtree :: [Branch] } deriving Show
@@ -15,7 +15,3 @@ movesforColors colors bs = rootCuts ++ (choose bs >>= subtreeCuts)
   where
     rootCuts = snd <$> filter (\(b,_) -> color b `elem` colors) (choose bs)
     subtreeCuts (b,bs) = map (\t -> Branch (color b) t : bs) (movesforColors colors (subtree b))
-
--- Return a list of all possible ways to choose an element of the list, zipped with the list of remaining elements
-choose :: [a] -> [(a,[a])]
-choose xs = zip xs $ zipWith (++) (inits xs) (tail (tails xs))

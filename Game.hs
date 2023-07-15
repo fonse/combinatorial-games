@@ -3,9 +3,10 @@
 {-# HLINT ignore "Use >" #-}
 module Game where
 
-import Data.List
-import Data.Maybe
-import Data.Ratio
+import Util ( filterIfAnotherElementSatisfies, mex )
+import Data.List ( find )
+import Data.Maybe ( fromJust, fromMaybe, isNothing )
+import Data.Ratio ( denominator, numerator )
 
 data Game = Game { left :: [Game], right :: [Game] }
 
@@ -220,22 +221,4 @@ class Combinatorial a where
   leftMoves :: a -> [a]
   rightMoves :: a -> [a]
   toGame :: a -> Game
-  toGame x = Game (toGame <$> leftMoves x) (toGame <$> rightMoves x)
-  
-
------------------------
----- Aux functions ----
------------------------
--- Like filter but the condition compares the element being analyzed to every other element in the list. If any satisfies, the element is removed.
-filterIfAnotherElementSatisfies :: (a -> a -> Bool) -> [a] -> [a]
-filterIfAnotherElementSatisfies = filterIfAnotherElementSatisfies' []
-
-filterIfAnotherElementSatisfies' :: [a] -> (a -> a -> Bool) -> [a] -> [a]
-filterIfAnotherElementSatisfies' _ _ [] = []
-filterIfAnotherElementSatisfies' passed f (x:xs) =
-  if any (f x) (passed ++ xs)
-    then filterIfAnotherElementSatisfies' passed f xs
-    else x : filterIfAnotherElementSatisfies' (x:passed) f xs
-
-mex :: [Int] -> Int
-mex ns = fromJust $ find (`notElem` ns) [0..]
+  toGame x = simplify $ Game (toGame <$> leftMoves x) (toGame <$> rightMoves x)
