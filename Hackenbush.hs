@@ -1,4 +1,5 @@
 import Game
+import Data.List
 
 data Color = Blue | Red | Green deriving (Show, Eq)
 data Branch = Branch { color :: Color, subtree :: [Branch] } deriving Show
@@ -8,20 +9,13 @@ instance Combinatorial HackenbushTree where
   leftMoves = movesforColors [Blue, Green]
   rightMoves = movesforColors [Red, Green]
 
--- Return all possible lists obtained by removing exactly one element that matches a given predicate
-conditionalRemovals :: (a -> Bool) -> [a] -> [[a]]
-conditionalRemovals _ [] = []
-conditionalRemovals f (a:as)
-  | f a = as : otherRemovals
-  | otherwise = otherRemovals
-  where otherRemovals = (a:) <$> conditionalRemovals f as
-
-zippedRemovals :: [a] -> [(a,[a])]
-zippedRemovals xs = zip xs $ conditionalRemovals (const True) xs
-
 -- Positions after cutting exactly one branch of a color in the given list
 movesforColors :: [Color] -> HackenbushTree -> [HackenbushTree]
-movesforColors colors bs = rootCuts ++ (zippedRemovals bs >>= subtreeCuts)
+movesforColors colors bs = rootCuts ++ (choose bs >>= subtreeCuts)
   where
-    rootCuts = conditionalRemovals (\b -> color b `elem` colors) bs
-    subtreeCuts (b,bs) = map (\t -> Branch (color b) t : bs) (movesforColors colors (subtree b)) -- Fix here
+    rootCuts = snd <$> filter (\(b,_) -> color b `elem` colors) (choose bs)
+    subtreeCuts (b,bs) = map (\t -> Branch (color b) t : bs) (movesforColors colors (subtree b))
+
+-- Return a list of all possible ways to choose an element of the list, zipped with the list of remaining elements
+choose :: [a] -> [(a,[a])]
+choose xs = zip xs $ zipWith (++) (inits xs) (tail (tails xs))
