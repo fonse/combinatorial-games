@@ -1,3 +1,5 @@
+module Hackenbush where
+
 import Game
 import Util ( choose )
 

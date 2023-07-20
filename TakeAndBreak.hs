@@ -1,3 +1,5 @@
+module TakeAndBreak where
+
 import Game
 import Util ( choose )
 import Data.Bits ( Bits(testBit) )
