@@ -1,23 +1,19 @@
 module ToadsAndFrogs where
 
 import Game
-import Data.Bifunctor (second)
+import Movespace ( Movespace, start, applyMove, calculate )
 
 data Batrachian = Toad | Frog | Blank deriving (Eq,Show)
 type ToadsAndFrogs = [Batrachian]
 
 toadMoves :: ToadsAndFrogs -> [ToadsAndFrogs]
-toadMoves xs = snd <$> filter fst (toadMoves' xs)
+toadMoves = calculate toadMoves'
 
-toadMoves' :: ToadsAndFrogs -> [(Bool,ToadsAndFrogs)]
-toadMoves' [] = [(False,[])]
-toadMoves' (Toad:Blank:xs) = do
-  (hasMoved,position) <- toadMoves' xs
-  if hasMoved then return (True, Toad:Blank:position) else [(True, Blank:Toad:position), (False, Toad:Blank:position)]
-toadMoves' (Toad:Frog:Blank:xs) = do
-  (hasMoved,position) <- toadMoves' xs
-  if hasMoved then return (True, Toad:Frog:Blank:position) else [(True, Blank:Frog:Toad:position), (False, Toad:Frog:Blank:position)]
-toadMoves' (x:xs) = second (x:) <$> toadMoves' xs
+toadMoves' :: ToadsAndFrogs -> Movespace ToadsAndFrogs
+toadMoves' [] = start []
+toadMoves' (Toad:Blank:xs) = applyMove (\tail -> Blank:Toad:tail) (\tail -> Toad:Blank:tail) (toadMoves' xs)
+toadMoves' (Toad:Frog:Blank:xs) = applyMove (\tail -> Blank:Frog:Toad:tail) (\tail -> Toad:Frog:Blank:tail) (toadMoves' xs)
+toadMoves' (x:xs) = (x:) <$> toadMoves' xs
 
 frogMoves :: ToadsAndFrogs -> [ToadsAndFrogs]
 frogMoves xs = reverseGame <$> toadMoves (reverseGame xs)
