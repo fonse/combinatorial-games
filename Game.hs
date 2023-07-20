@@ -103,9 +103,11 @@ show' g = fromJust $ head $ dropWhile isNothing candidates
     candidates = [
       showRational <$> toMaybeRational g, -- Is it a number?
       showNimber <$> nimIndex g, -- Is it a nimber?
-      showArrowNotation <$> arrowNotationIndex g, -- Is it n.↑?
-      showArrowStarNotation <$> arrowStarNotationIndex g, -- Is it n.↑ + *?
-      fmap (\n -> showRational n ++ "*") (toMaybeRational $ simplify $ g + star), -- Is it a number + *?
+      showArrow <$> arrowIndex g, -- Is it n.↑?
+      showArrowStar <$> arrowStarIndex g, -- Is it n.↑ + *?
+      fmap (\n -> showRational n ++ "*") (toMaybeRational $ g + star), -- Is it a number + *?
+      showTiny <$> tinyIndex g, -- Is it tiny-x?
+      showMiny <$> minyIndex g, -- Is it miny-x?
       Just (showGeneric g)]
 
 showRational :: Rational -> String
@@ -118,26 +120,33 @@ showNimber 0 = "0"
 showNimber 1 = "*"
 showNimber n = "*" ++ show n
 
-showArrowNotation :: Int -> String
-showArrowNotation (-2) = "⇓"
-showArrowNotation (-1) = "↓"
-showArrowNotation 0 = "0"
-showArrowNotation 1 = "↑"
-showArrowNotation 2 = "⇑"
-showArrowNotation n
+showArrow :: Int -> String
+showArrow (-2) = "⇓"
+showArrow (-1) = "↓"
+showArrow 0 = "0"
+showArrow 1 = "↑"
+showArrow 2 = "⇑"
+showArrow n
   | n > 0 = show n ++ ".↑"
   | otherwise = show n ++ ".↓"
 
-showArrowStarNotation :: Int -> String
-showArrowStarNotation (-2) = "⇓*"
-showArrowStarNotation (-1) = "↓*"
-showArrowStarNotation 0 = "*"
-showArrowStarNotation 1 = "↑*"
-showArrowStarNotation 2 = "⇑*"
-showArrowStarNotation n
+showArrowStar :: Int -> String
+showArrowStar (-2) = "⇓*"
+showArrowStar (-1) = "↓*"
+showArrowStar 0 = "*"
+showArrowStar 1 = "↑*"
+showArrowStar 2 = "⇑*"
+showArrowStar n
   | n > 0 = show n ++ ".↑+*"
   | otherwise = show n ++ ".↓+*"
 
+showTiny :: Game -> String
+showTiny g = "tiny-" ++ show g
+
+showMiny :: Game -> String
+showMiny g = "miny-" ++ show g
+
+showGeneric :: Game -> String
 showGeneric (Game ls rs) = "{ " ++ showMoves ls ++ " | " ++ showMoves rs ++ " }"
   where showMoves gs = unwords (show <$> gs)
 
@@ -148,7 +157,10 @@ toMaybeRational (Game ls rs)
   | any (\l -> any (l >=) rs) ls = Nothing
   | null maybeRights = (+1) <$> maxLeft
   | null maybeLefts = (\n -> n-1) <$> minRight
-  | otherwise = maxLeft >>= \a -> minRight >>= \b -> return ((a + b) / 2)
+  | otherwise = do
+      a <- maxLeft
+      b <- minRight
+      return ((a + b) / 2)
   where
     maybeLefts = toMaybeRational <$> ls
     maybeRights = toMaybeRational <$> rs
@@ -164,25 +176,38 @@ nimIndex (Game ls rs)
   where ns = nimIndex <$> ls
 
 -- If G is n.↑, what is that n?
-arrowNotationIndex :: Game -> Maybe Int
-arrowNotationIndex g
+arrowIndex :: Game -> Maybe Int
+arrowIndex g
   | g == zero = Just 0
-  | g < 0 = negate <$> arrowNotationIndex (-g)
-arrowNotationIndex (Game [gl] [gr])
+  | g < 0 = negate <$> arrowIndex (-g)
+arrowIndex (Game [gl] [gr])
   | gl /= zero = Nothing
-  | otherwise = arrowStarNotationIndex gr >>= \n -> if n >= 0 then Just (n+1) else Nothing
-arrowNotationIndex _ = Nothing
+  | otherwise = arrowStarIndex gr >>= \n -> if n >= 0 then Just (n+1) else Nothing
+arrowIndex _ = Nothing
 
 -- If G is n.↑ + *, what is that n?
-arrowStarNotationIndex :: Game -> Maybe Int
-arrowStarNotationIndex g
+arrowStarIndex :: Game -> Maybe Int
+arrowStarIndex g
   | g == up + star = Just 1
-  | g < star = negate <$> arrowStarNotationIndex (-g)
-arrowStarNotationIndex (Game [gl] [gr])
+  | g < star = negate <$> arrowStarIndex (-g)
+arrowStarIndex (Game [gl] [gr])
   | gl /= zero = Nothing
   | gr == zero = Just 0
-  | otherwise = arrowNotationIndex gr >>= \n -> if n >= 0 then Just (n+1) else Nothing
-arrowStarNotationIndex _ = Nothing
+  | otherwise = arrowIndex gr >>= \n -> if n >= 0 then Just (n+1) else Nothing
+arrowStarIndex _ = Nothing
+
+-- If G is tiny-x, what is that x?
+tinyIndex :: Game -> Maybe Game
+tinyIndex (Game [z1] [Game [z2] [negx]])
+  | z1 /= zero = Nothing
+  | z2 /= zero = Nothing
+  | negx > zero = Nothing
+  | otherwise = Just (-negx)
+tinyIndex _ = Nothing
+
+-- If G is miny-x, what is that x?
+minyIndex :: Game -> Maybe Game
+minyIndex g = tinyIndex (-g)
 
 --------------------------
 ---- Num for Addition ----
