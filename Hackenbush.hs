@@ -1,7 +1,6 @@
 module Hackenbush where
 
 import Game
-import Util ( choose )
 import PositionSpace ( extend, calculate, empty, PositionSpace )
 
 data Color = Blue | Red | Green deriving (Show, Eq)

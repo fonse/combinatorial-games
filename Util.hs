@@ -2,10 +2,6 @@ module Util where
 import Data.List ( inits, tails, find )
 import Data.Maybe ( fromJust )
 
--- Return a list of all possible ways to choose an element of the list, zipped with the list of remaining elements
-choose :: [a] -> [(a,[a])]
-choose xs = zip xs $ zipWith (++) (inits xs) (tail (tails xs))
-
 -- Like filter but the condition compares the element being analyzed to every other element in the list. If any satisfies, the element is removed.
 filterIfAnotherElementSatisfies :: (a -> a -> Bool) -> [a] -> [a]
 filterIfAnotherElementSatisfies = filterIfAnotherElementSatisfies' []
