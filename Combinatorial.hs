@@ -1,5 +1,18 @@
-module PositionSpace where
-import Data.Bifunctor (second)
+module Combinatorial where
+
+import Game ( Game(Game) )
+
+class Combinatorial a where
+  leftMoves :: a -> [a]
+  rightMoves :: a -> [a]
+  toGame :: a -> Game
+  toGame x = Game (toGame <$> leftMoves x) (toGame <$> rightMoves x)
+
+class Invertible a where
+  invert :: a -> a
+
+mirror :: Invertible a => (a -> [a]) -> a -> [a]
+mirror moves = (invert <$>) . moves . invert
 
 type Position a = (Bool, a)
 type PositionSpace a = [Position a]
@@ -15,9 +28,3 @@ extend play ignore xs = xs >>= playOrIgnore
 
 calculate :: (a -> PositionSpace a) -> a -> [a]
 calculate f x = snd <$> filter fst (f x)
-
-class Invertible a where
-  invert :: a -> a
-
-mirror :: Invertible a => (a -> [a]) -> a -> [a]
-mirror moves = (invert <$>) . moves . invert

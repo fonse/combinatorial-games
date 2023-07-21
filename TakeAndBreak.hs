@@ -1,9 +1,8 @@
 module TakeAndBreak where
 
-import Game
 import Data.Bits ( Bits(testBit) )
 import Data.List ( nub, sort )
-import PositionSpace ( PositionSpace, empty, extend, calculate )
+import Combinatorial ( PositionSpace, empty, extend, calculate, Combinatorial (..) )
 import Control.Monad (guard)
 
 type Heap = Int

@@ -10,6 +10,11 @@ import Data.Ratio ( denominator, numerator )
 
 data Game = Game { left :: [Game], right :: [Game] }
 
+zero = Game [] []
+star = Game [zero] [zero]
+up = Game [zero] [star]
+down = Game [star] [zero]
+
 ----------------------------
 ---- Euqality and Order ----
 ----------------------------
@@ -81,19 +86,39 @@ removeSmaller = filterIfAnotherElementSatisfies (<=)
 removeLarger :: [Game] -> [Game]
 removeLarger = filterIfAnotherElementSatisfies (>=)
 
--------------------------------
----- Useful Games and Show ----
--------------------------------
-zero = Game [] []
-star = Game [zero] [zero]
-up = Game [zero] [star]
-down = Game [star] [zero]
+--------------------------
+---- Num for Addition ----
+--------------------------
+instance Num Game where
+  g + h = simplify $ Game ls rs
+    where
+      ls  = map (+h) (left g) ++ map (+g) (left h)
+      rs = map (+h) (right g) ++ map (+g) (right h)
 
-nim :: Int -> Game
-nim 0 = zero
-nim n = Game xs xs
-  where xs = nim <$> [0..(n-1)]
+  negate (Game ls rs) = Game (negate <$> rs) (negate <$> ls)
 
+  fromInteger n
+    | n == 0 = zero
+    | n > 0 = Game [fromInteger (n-1)] []
+    | otherwise = Game [] [fromInteger (n+1)]
+
+  -- These only make sense for games which are numbers, but are required by Num
+  g * h = simplify $ Game (left1++left2) (right1++right2)
+    where
+      left1   = [ gl*h + g*hl - gl*hl | gl <- left g,  hl <- left h  ]
+      left2   = [ gr*h + g*hr - gr*hr | gr <- right g, hr <- right h ]
+      right1  = [ gl*h + g*hr - gl*hr | gl <- left g,  hr <- right h ]
+      right2  = [ gr*h + g*hl - gr*hl | gr <- right g, hl <- left h  ]
+
+  abs g = g * signum g
+  signum g
+    | g == zero = 0
+    | g > zero  = 1
+    | otherwise = -1
+
+---------------
+----  Show ----
+---------------
 instance Show Game where
   show = show' . simplify
 
@@ -208,42 +233,3 @@ tinyIndex _ = Nothing
 -- If G is miny-x, what is that x?
 minyIndex :: Game -> Maybe Game
 minyIndex g = tinyIndex (-g)
-
---------------------------
----- Num for Addition ----
---------------------------
-instance Num Game where
-  g + h = simplify $ Game ls rs
-    where
-      ls  = map (+h) (left g) ++ map (+g) (left h)
-      rs = map (+h) (right g) ++ map (+g) (right h)
-
-  negate (Game ls rs) = Game (negate <$> rs) (negate <$> ls)
-
-  fromInteger n
-    | n == 0 = zero
-    | n > 0 = Game [fromInteger (n-1)] []
-    | otherwise = Game [] [fromInteger (n+1)]
-
-  -- These only make sense for games which are numbers, but are required by Num
-  g * h = simplify $ Game (left1++left2) (right1++right2)
-    where
-      left1   = [ gl*h + g*hl - gl*hl | gl <- left g,  hl <- left h  ]
-      left2   = [ gr*h + g*hr - gr*hr | gr <- right g, hr <- right h ]
-      right1  = [ gl*h + g*hr - gl*hr | gl <- left g,  hr <- right h ]
-      right2  = [ gr*h + g*hl - gr*hl | gr <- right g, hl <- left h  ]
-
-  abs g = g * signum g
-  signum g
-    | g == zero = 0
-    | g > zero  = 1
-    | otherwise = -1
-
----------------------------------
----- Combinatorial Typeclass ----
----------------------------------
-class Combinatorial a where
-  leftMoves :: a -> [a]
-  rightMoves :: a -> [a]
-  toGame :: a -> Game
-  toGame x = simplify $ Game (toGame <$> leftMoves x) (toGame <$> rightMoves x)

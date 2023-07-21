@@ -1,7 +1,6 @@
 module ToadsAndFrogs where
 
-import Game
-import PositionSpace ( PositionSpace, empty, extend, calculate, mirror, Invertible (invert) )
+import Combinatorial ( PositionSpace, empty, extend, calculate, mirror, Invertible (..), Combinatorial (..) )
 
 data Batrachian = Toad | Frog | Blank deriving (Eq,Show)
 type ToadsAndFrogs = [Batrachian]

@@ -1,7 +1,6 @@
 module Hackenbush where
 
-import Game
-import PositionSpace ( extend, calculate, empty, PositionSpace )
+import Combinatorial ( extend, calculate, empty, PositionSpace, Combinatorial (..) )
 
 data Color = Blue | Red | Green deriving (Show, Eq)
 data Branch = Branch { color :: Color, subtree :: [Branch] } deriving Show
