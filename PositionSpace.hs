@@ -15,3 +15,9 @@ extend play ignore xs = xs >>= playOrIgnore
 
 calculate :: (a -> PositionSpace a) -> a -> [a]
 calculate f x = snd <$> filter fst (f x)
+
+class Invertible a where
+  invert :: a -> a
+
+mirror :: Invertible a => (a -> [a]) -> a -> [a]
+mirror moves = (invert <$>) . moves . invert
