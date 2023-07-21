@@ -10,11 +10,11 @@ instance Functor Movespace where
 start :: a -> Movespace a
 start x = Movespace [(False, x)]
 
-applyMove :: (a -> b) -> (a -> b) -> Movespace a -> Movespace b
+applyMove :: (a -> [b]) -> (a -> b) -> Movespace a -> Movespace b
 applyMove play ignore (Movespace xs) = Movespace $ xs >>= playOrIgnore
   where
     playOrIgnore (True, x) = [(True, ignore x)]
-    playOrIgnore (False, x) = [(True, play x), (False, ignore x)]
+    playOrIgnore (False, x) = (False, ignore x) : ((True,) <$> play x)
 
 calculate :: (a -> Movespace b) -> a -> [b]
 calculate f x = snd <$> filter fst (positions (f x))

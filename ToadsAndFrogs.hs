@@ -11,8 +11,8 @@ toadMoves = calculate toadMoves'
 
 toadMoves' :: ToadsAndFrogs -> Movespace ToadsAndFrogs
 toadMoves' [] = start []
-toadMoves' (Toad:Blank:xs) = applyMove (\tail -> Blank:Toad:tail) (\tail -> Toad:Blank:tail) (toadMoves' xs)
-toadMoves' (Toad:Frog:Blank:xs) = applyMove (\tail -> Blank:Frog:Toad:tail) (\tail -> Toad:Frog:Blank:tail) (toadMoves' xs)
+toadMoves' (Toad:Blank:xs) = applyMove (\tail -> [Blank:Toad:tail]) (\tail -> Toad:Blank:tail) (toadMoves' xs)
+toadMoves' (Toad:Frog:Blank:xs) = applyMove (\tail -> [Blank:Frog:Toad:tail]) (\tail -> Toad:Frog:Blank:tail) (toadMoves' xs)
 toadMoves' (x:xs) = (x:) <$> toadMoves' xs
 
 frogMoves :: ToadsAndFrogs -> [ToadsAndFrogs]
