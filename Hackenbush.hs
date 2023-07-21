@@ -2,7 +2,7 @@ module Hackenbush where
 
 import Game
 import Util ( choose )
-import Movespace ( applyMove, calculate, start, Movespace )
+import PositionSpace ( extend, calculate, empty, PositionSpace )
 
 data Color = Blue | Red | Green deriving (Show, Eq)
 data Branch = Branch { color :: Color, subtree :: [Branch] } deriving Show
@@ -16,9 +16,9 @@ instance Combinatorial HackenbushTree where
 movesforColors :: [Color] -> HackenbushTree -> [HackenbushTree]
 movesforColors colors = calculate (movesforColors' colors)
 
-movesforColors' :: [Color] -> HackenbushTree -> Movespace HackenbushTree
-movesforColors' _ [] = start []
-movesforColors' colors (b:bs) = applyMove (\tail -> (++tail) <$> rootCuts ++ subtreeCuts) (b:) (movesforColors' colors bs)
+movesforColors' :: [Color] -> HackenbushTree -> PositionSpace HackenbushTree
+movesforColors' _ [] = empty []
+movesforColors' colors (b:bs) = extend (\tail -> (++tail) <$> rootCuts ++ subtreeCuts) (b:) (movesforColors' colors bs)
   where
     rootCuts = [[] | color b `elem` colors]
     subtreeCuts = (\t -> [Branch (color b) t]) <$> movesforColors colors (subtree b)
