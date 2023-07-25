@@ -3,7 +3,7 @@
 {-# HLINT ignore "Use >" #-}
 module Game where
 
-import Util ( filterIfAnotherElementSatisfies, mex )
+import Util.List ( filterIfAnotherElementSatisfies, mex )
 import Data.List ( find )
 import Data.Maybe ( fromJust, fromMaybe, isNothing )
 import Data.Ratio ( denominator, numerator )

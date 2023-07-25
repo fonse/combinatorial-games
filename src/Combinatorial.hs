@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 module Combinatorial where
 
 import Game ( Game(Game) )

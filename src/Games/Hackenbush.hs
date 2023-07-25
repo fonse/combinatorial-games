@@ -1,4 +1,4 @@
-module Hackenbush where
+module Games.Hackenbush where
 
 import Combinatorial ( extend, calculate, empty, PositionSpace, Combinatorial (..) )
 

@@ -1,4 +1,4 @@
-module Util where
+module Util.List where
 import Data.List ( inits, tails, find )
 import Data.Maybe ( fromJust )
 
@@ -13,5 +13,5 @@ filterIfAnotherElementSatisfies' passed f (x:xs) =
     then filterIfAnotherElementSatisfies' passed f xs
     else x : filterIfAnotherElementSatisfies' (x:passed) f xs
 
-mex :: [Int] -> Int
+mex :: (Foldable t, Eq a, Num a, Enum a) => t a -> a
 mex ns = fromJust $ find (`notElem` ns) [0..]

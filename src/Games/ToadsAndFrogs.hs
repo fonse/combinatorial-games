@@ -1,4 +1,4 @@
-module ToadsAndFrogs where
+module Games.ToadsAndFrogs where
 
 import Combinatorial ( PositionSpace, empty, extend, calculate, mirror, Invertible (..), Combinatorial (..) )
 

@@ -1,4 +1,4 @@
-module TakeAndBreak where
+module Games.TakeAndBreak where
 
 import Data.Bits ( Bits(testBit) )
 import Data.List ( nub, sort )

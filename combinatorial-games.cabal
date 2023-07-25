@@ -1,0 +1,24 @@
+cabal-version:      2.4
+name:               combinatorial-games
+version:            0.1.0.0
+
+extra-source-files:
+    README.md
+
+library
+    exposed-modules:
+        Game
+        Combinatorial
+        Games.Hackenbush
+        Games.TakeAndBreak
+        Games.ToadsAndFrogs
+
+    other-modules:
+        Util.List
+
+    extensions:
+        FlexibleInstances
+
+    build-depends:    base ^>=4.16.4.0
+    hs-source-dirs:   src
+    default-language: Haskell2010
