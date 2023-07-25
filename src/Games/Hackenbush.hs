@@ -20,3 +20,15 @@ movesforColors' colors (b:bs) = extend (\tail -> (++tail) <$> rootCuts ++ subtre
   where
     rootCuts = [[] | color b `elem` colors]
     subtreeCuts = (\t -> [Branch (color b) t]) <$> movesforColors colors (subtree b)
+
+-- Helpers for building positions
+blue = Branch Blue []
+red = Branch Red []
+green = Branch Green []
+
+flower :: [Branch] -> Branch
+flower = Branch Green
+
+stack :: [Color] -> Branch
+stack [x] = Branch x []
+stack (x:xs) = Branch x [stack xs]
