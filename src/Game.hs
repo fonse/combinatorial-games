@@ -6,7 +6,8 @@ module Game where
 import Util.List ( filterIfAnotherElementSatisfies, mex )
 import Data.List ( find )
 import Data.Maybe ( fromJust, fromMaybe, isNothing )
-import Data.Ratio ( denominator, numerator )
+import Data.Ratio ( denominator, numerator, (%) )
+import Data.Bits
 
 data Game = Game { left :: [Game], right :: [Game] }
 
@@ -115,6 +116,17 @@ instance Num Game where
     | g == zero = 0
     | g > zero  = 1
     | otherwise = -1
+
+-- Not all games are Fractional, but it's helpful for those that are so we can do stuff like 1/2 + star
+instance Fractional Game where
+  fromRational 1 = 1
+  fromRational x
+    | popCount (denominator x) /= 1 = 0/0
+    | x < 0 = fromRational x * (-1)
+    | numerator x == 1 = Game [0] [fromRational (x*2)]
+    | otherwise = fromInteger (numerator x) * fromRational (1 % denominator x)
+
+  recip g = fromRational . recip $ fromMaybe (0/0) (toMaybeRational g)
 
 ---------------
 ----  Show ----
