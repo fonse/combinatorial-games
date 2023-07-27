@@ -5,9 +5,11 @@ module Game where
 
 import Util.List ( filterIfAnotherElementSatisfies, mex )
 import Data.List ( find )
-import Data.Maybe ( fromJust, fromMaybe, isNothing )
+import Data.Maybe ( fromJust, fromMaybe, isNothing, isJust )
 import Data.Ratio ( denominator, numerator, (%) )
-import Data.Bits
+import Data.Bits ( Bits(popCount) )
+import qualified Data.MemoCombinators as Memo
+import Control.Monad (guard)
 
 data Game = Game { left :: [Game], right :: [Game] }
 
@@ -55,13 +57,20 @@ instance StructuralEq Game where
 ---- Simplifying Games ----
 ---------------------------
 simplify :: Game -> Game
-simplify g
-  | g === h = g
-  | otherwise = simplify h
-  where h = simplify' g
+simplify = memorize simplify'
 
 simplify' :: Game -> Game
-simplify' (Game ls rs) = deleteDominatedStrategies . bypassReversibeMoves $ Game (simplify <$> ls) (simplify <$> rs)
+simplify' g
+  | g === simpler = g
+  | otherwise = simplify' simpler
+  where simpler = deleteDominatedStrategies . bypassReversibeMoves $ Game (simplify <$> left g) (simplify <$> right g)
+
+-- Use MemoCombinators for performance
+memorize :: (Game -> r) -> Game -> r
+memorize = Memo.wrap decode encode $ Memo.pair (Memo.list memorize) (Memo.list memorize)
+  where
+    decode (ls,rs) = Game ls rs
+    encode (Game ls rs) = (ls,rs)
 
 -- If any Left option M of G has itself a Right option Mᴿ <= G, then it will not affect the value of G if we replace M as a Left option of G by all the Left options of that Mᴿ
 -- If any Right option M of G has itself a Left option Mᴸ >= G, then it will not affect the value of G if we replace M as a Right option of G by all the Right options of that Mᴸ
@@ -87,9 +96,9 @@ removeSmaller = filterIfAnotherElementSatisfies (<=)
 removeLarger :: [Game] -> [Game]
 removeLarger = filterIfAnotherElementSatisfies (>=)
 
---------------------------
----- Num for Addition ----
---------------------------
+--------------------
+---- Arithmetic ----
+--------------------
 instance Num Game where
   g + h = simplify $ Game ls rs
     where
@@ -103,28 +112,40 @@ instance Num Game where
     | n > 0 = Game [fromInteger (n-1)] []
     | otherwise = Game [] [fromInteger (n+1)]
 
-  -- These only make sense for games which are numbers, but are required by Num
-  g * h = simplify $ Game (left1++left2) (right1++right2)
+  -- These only make sense for games which are numbers but are required by Num
+  g * h
+    | isJust maybeN = sum $ replicate (fromJust maybeN) h
+    | isJust (toMaybeInt h) = h * g
+    | otherwise = simplify $ Game (left1++left2) (right1++right2)
     where
+      maybeN = toMaybeInt g
       left1   = [ gl*h + g*hl - gl*hl | gl <- left g,  hl <- left h  ]
       left2   = [ gr*h + g*hr - gr*hr | gr <- right g, hr <- right h ]
       right1  = [ gl*h + g*hr - gl*hr | gl <- left g,  hr <- right h ]
       right2  = [ gr*h + g*hl - gr*hl | gr <- right g, hl <- left h  ]
 
   abs g = g * signum g
+
   signum g
     | g == zero = 0
     | g > zero  = 1
     | otherwise = -1
 
--- Not all games are Fractional, but it's helpful for those that are so we can do stuff like 1/2 + star
+-- Not all games are rational, but it's helpful for those that are so we can do stuff like 1/2 + star
 instance Fractional Game where
-  fromRational 1 = 1
-  fromRational x
-    | popCount (denominator x) /= 1 = 0/0
-    | x < 0 = fromRational x * (-1)
-    | numerator x == 1 = Game [0] [fromRational (x*2)]
-    | otherwise = fromInteger (numerator x) * fromRational (1 % denominator x)
+  fromRational x -- a / b
+    | b == 1 = fromIntegral a
+    | d > 1 = fromRational $ (a `div` d) % (b `div` d)
+    | popCount b /= 1 = 0/0
+    | x < 0 = negate (fromRational (-x))
+    | a >= b = fromIntegral (a `div` b) + fromRational ((a `mod` b) % b)
+    | otherwise = Game [fromRational (halfa % halfb)] [fromRational ((halfa + 1) % halfb)]
+    where
+      a = numerator x
+      b = denominator x
+      halfa = a `div` 2
+      halfb = b `div` 2
+      d = gcd a b
 
   recip g = fromRational . recip $ fromMaybe (0/0) (toMaybeRational g)
 
@@ -203,6 +224,12 @@ toMaybeRational (Game ls rs)
     maybeRights = toMaybeRational <$> rs
     maxLeft = maximum <$> sequence maybeLefts
     minRight = minimum <$> sequence maybeRights
+
+toMaybeInt :: Game -> Maybe Int
+toMaybeInt g = do
+  r <- toMaybeRational g
+  guard $ denominator r == 1
+  return . fromIntegral $ numerator r
 
 -- If G is *n, what is that n?
 nimIndex :: Game -> Maybe Int
