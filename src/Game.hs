@@ -13,10 +13,22 @@ import Control.Monad (guard)
 
 data Game = Game { left :: [Game], right :: [Game] }
 
+-- Useful games
 zero = Game [] []
 star = Game [zero] [zero]
 up = Game [zero] [star]
 down = Game [star] [zero]
+
+tiny :: Game -> Game
+tiny g = Game [0] [Game [0] [-g]]
+
+miny :: Game -> Game
+miny g = Game [Game [g] [0]] [0]
+
+nim :: Int -> Game
+nim 0 = 0
+nim n = Game xs xs
+  where xs = nim <$> [0..n-1]
 
 ----------------------------
 ---- Euqality and Order ----
