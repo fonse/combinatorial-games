@@ -161,6 +161,61 @@ instance Fractional Game where
 
   recip g = fromRational . recip $ fromMaybe (0/0) (toMaybeRational g)
 
+------------------------
+----  Atomic Weight ----
+------------------------
+-- Is g a small game?
+isSmall :: Game -> Bool
+isSmall 0 = True
+isSmall (Game ls rs) = not (null ls) && not (null rs) && all isSmall ls && all isSmall rs
+
+-- What star is remote enough for this game?
+remote :: Game -> Game
+remote 0 = star
+remote (Game ls rs) = nim . (+1) . maximum $ fromMaybe 0 . nimIndex <$> (ls ++ rs)
+
+-- Atomic weight of a (small) game
+atomic :: Game -> Maybe Game
+atomic g
+  | not (isSmall g) = Nothing
+  | otherwise = Just (atomic' g)
+
+atomic' :: Game -> Game
+atomic' g
+  | isInteger && g > remoteStar = greatestIntegerSatisfying (\n -> all (n<|) rights)
+  | isInteger && g < remoteStar = leastIntegerSatisfying (\n -> all (n|>) lefts)
+  | otherwise = candidate
+  where
+    remoteStar = remote g
+    lefts = (+(-2)) . atomic' <$> left g
+    rights = (+2) . atomic' <$> right g
+    candidate = simplify (Game lefts rights)
+    isInteger = null (left candidate) || null (right candidate)
+
+leastIntegerSatisfying :: (Game -> Bool) -> Game
+leastIntegerSatisfying f
+  | f 0       = searchDown (-1)
+  | otherwise = searchUp 1
+  where
+    searchDown n
+      | f n = searchDown (n-1)
+      | otherwise = n+1
+    searchUp n
+      | f n       = n
+      | otherwise = searchUp (n+1)
+
+greatestIntegerSatisfying :: (Game -> Bool) -> Game
+greatestIntegerSatisfying f
+  | f 0       = searchUp 1
+  | otherwise = searchDown (-1)
+  where
+    searchDown n
+      | f n = n
+      | otherwise = searchDown (n-1)
+    searchUp n
+      | f n       = searchUp (n+1)
+      | otherwise = n-1
+
 ---------------
 ----  Show ----
 ---------------
