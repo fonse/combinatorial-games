@@ -179,15 +179,15 @@ thermograph g = case toMaybeRational g of
   Just x -> coldThermograph x
   Nothing -> calculateThermograph (thermograph <$> left g) (thermograph <$> right g)
 
-meanValue :: Game -> Rational
-meanValue = meanValueT . thermograph
+meanValue :: Game -> Game
+meanValue = fromRational . meanValueT . thermograph
 
 temperature :: Game -> Rational
 temperature = freezingPointT . thermograph
 
 cool :: Rational -> Game -> Game
 cool t g
-  | t > temperature g = g
+  | t > temperature g = meanValue g
   | otherwise = Game ((+fromRational (-t)) . cool t <$> left g) ((+fromRational t) . cool t <$> right g)
 
 heat :: Rational -> Game -> Game
