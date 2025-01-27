@@ -9,6 +9,7 @@ library combinatorial-games-lib
     exposed-modules:
         Game
         Combinatorial
+        Thermograph
         Games.Hackenbush
         Games.TakeAndBreak
         Games.ToadsAndFrogs

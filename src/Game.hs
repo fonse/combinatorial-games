@@ -10,6 +10,7 @@ import Data.Ratio ( denominator, numerator, (%) )
 import Data.Bits ( Bits(popCount) )
 import qualified Data.MemoCombinators as Memo
 import Control.Monad (guard)
+import Thermograph (Thermograph, coldThermograph, calculateThermograph, meanValueT, freezingPointT)
 
 data Game = Game { left :: [Game], right :: [Game] }
 
@@ -160,6 +161,30 @@ instance Fractional Game where
       d = gcd a b
 
   recip g = fromRational . recip $ fromMaybe (0/0) (toMaybeRational g)
+
+----------------------
+----  Temperature ----
+----------------------
+thermograph :: Game -> Thermograph
+thermograph g = case toMaybeRational g of
+  Just x -> coldThermograph x
+  Nothing -> calculateThermograph (thermograph <$> left g) (thermograph <$> right g)
+
+meanValue :: Game -> Rational
+meanValue = meanValueT . thermograph
+
+temperature :: Game -> Rational
+temperature = freezingPointT . thermograph
+
+cool :: Rational -> Game -> Game
+cool t g
+  | t > temperature g = g
+  | otherwise = Game ((+fromRational (-t)) . cool t <$> left g) ((+fromRational t) . cool t <$> right g)
+
+heat :: Rational -> Game -> Game
+heat t g = case toMaybeRational g of
+  Just x -> fromRational x
+  Nothing -> Game ((+fromRational t) . heat t <$> left g) ((+fromRational (-t)) . heat t <$> right g)
 
 ------------------------
 ----  Atomic Weight ----
