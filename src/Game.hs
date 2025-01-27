@@ -14,17 +14,26 @@ import Thermograph (Thermograph, coldThermograph, calculateThermograph, meanValu
 
 data Game = Game { left :: [Game], right :: [Game] }
 
+-- Useful operators to build games
+infixr 9 .|
+(.|) :: Game -> Game -> Game
+g .| h = Game [g] [h]
+
+infix 8 .||
+(.||) :: Game -> Game -> Game
+g .|| h = Game [g] [h]
+
 -- Useful games
 zero = Game [] []
-star = Game [zero] [zero]
-up = Game [zero] [star]
-down = Game [star] [zero]
+star = zero .| zero
+up = zero .| star
+down = star .| zero
 
 tiny :: Game -> Game
-tiny g = Game [0] [Game [0] [-g]]
+tiny g = 0 .|| 0 .| (-g)
 
 miny :: Game -> Game
-miny g = Game [Game [g] [0]] [0]
+miny g = g .| 0 .|| 0
 
 nim :: Int -> Game
 nim 0 = 0
@@ -297,8 +306,14 @@ showMiny :: Game -> String
 showMiny g = "miny-" ++ show g
 
 showGeneric :: Game -> String
-showGeneric (Game ls rs) = "{ " ++ showMoves ls ++ " | " ++ showMoves rs ++ " }"
-  where showMoves gs = unwords (show <$> gs)
+showGeneric (Game ls rs) = "{ " ++ showLeft ++ separator ++ showRight ++ " }"
+  where
+    showMoves gs = unwords (show <$> gs)
+    showLeft = showMoves ls
+    showRight = showMoves rs
+    separator 
+      | '|' `elem` (showLeft ++ showRight) = " ‖ "
+      | otherwise = " | "
 
 toMaybeRational :: Game -> Maybe Rational
 toMaybeRational (Game [] []) = Just 0
