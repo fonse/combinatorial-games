@@ -33,7 +33,7 @@ meanValueT = lastValue . leftBoundary
     lastValue (x:xs) = lastValue xs
 
 freezingPointT :: Thermograph -> Rational
-freezingPointT = lastTemperature . leftBoundary
+freezingPointT thermograph = max (lastTemperature (leftBoundary thermograph)) (lastTemperature (rightBoundary thermograph))
   where
     lastTemperature [x] = temp x
     lastTemperature (x:xs) = lastTemperature xs
