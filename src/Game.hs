@@ -257,7 +257,7 @@ instance Show Game where
   show = show' . simplify
 
 -- G needs to be in its simplifed form
-show' g = fromJust $ head $ dropWhile isNothing candidates
+show' g = fromJust . head $ dropWhile isNothing candidates
   where
     candidates = [
       showRational <$> toMaybeRational g, -- Is it a number?
