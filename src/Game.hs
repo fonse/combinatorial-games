@@ -1,10 +1,11 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use <" #-}
 {-# HLINT ignore "Use >" #-}
+{-# LANGUAGE InstanceSigs #-}
 module Game where
 
 import Util.List ( filterIfAnotherElementSatisfies, mex )
-import Data.List ( find, nub, sortBy )
+import Data.List ( find, nub, sortBy, intercalate )
 import Data.Maybe ( fromJust, fromMaybe, isNothing, isJust )
 import Data.Ratio ( denominator, numerator, (%) )
 import Data.Bits ( Bits(popCount) )
@@ -175,6 +176,10 @@ instance Fractional Game where
 ----------------------
 ----  Temperature ----
 ----------------------
+type Temperature = Rational
+data HeatedGame = HeatedBy { baseGame :: Game, temp :: Temperature }
+data ThermalDissociation = Thermal { cold :: Game, hot :: [HeatedGame] }
+
 thermograph :: Game -> Thermograph
 thermograph g = case toMaybeRational g of
   Just x -> coldThermograph x
@@ -183,24 +188,45 @@ thermograph g = case toMaybeRational g of
 meanValue :: Game -> Game
 meanValue = fromRational . meanValueT . thermograph
 
-temperature :: Game -> Rational
+temperature :: Game -> Temperature
 temperature = freezingPointT . thermograph
 
-cool :: Rational -> Game -> Game
+cool :: Temperature -> Game -> Game
 cool t g
   | t > temperature g = meanValue g
   | otherwise = Game ((+fromRational (-t)) . cool t <$> left g) ((+fromRational t) . cool t <$> right g)
 
-heat :: Rational -> Game -> Game
+heat :: Temperature -> Game -> Game
 heat t g = case toMaybeRational g of
   Just x -> fromRational x
   Nothing -> Game ((+fromRational t) . heat t <$> left g) ((+fromRational (-t)) . heat t <$> right g)
 
-criticalTemperatures :: Game -> [Rational]
+criticalTemperatures :: Game -> [Temperature]
 criticalTemperatures = sortBy (comparing Down) . filter (/= 0) . nub . criticalTemperatures'
+  where
+    criticalTemperatures' g = cornersT (thermograph g) ++ concatMap (cornersT . thermograph) (left g) ++ concatMap (cornersT . thermograph) (right g)
 
-criticalTemperatures' :: Game -> [Rational]
-criticalTemperatures' g = cornersT (thermograph g) ++ concatMap criticalTemperatures' (left g) ++ concatMap criticalTemperatures' (right g)
+thermalDissociation :: Game -> ThermalDissociation
+thermalDissociation g = dissociate g (criticalTemperatures g) (Thermal (meanValue g) [])
+
+dissociate :: Game -> [Temperature] -> ThermalDissociation -> ThermalDissociation
+dissociate _ [] thermal = thermal
+dissociate g (t:ts) thermal = dissociate g ts newThermal
+  where
+    particle = cool t g - reassociate t thermal
+    newThermal
+      | particle == 0 = thermal
+      | otherwise = Thermal (cold thermal) ((particle `HeatedBy` t):hot thermal)
+
+reassociate :: Temperature -> ThermalDissociation -> Game
+reassociate coldness (Thermal g gs) = g + sum (reheat <$> gs)
+  where
+    reheat (h `HeatedBy` t) = heat (t - coldness) h
+
+instance Show ThermalDissociation where
+  show (Thermal g gs) = show g ++ " + " ++ intercalate " + " (showParticle <$> gs)
+    where
+      showParticle (h `HeatedBy` t) = "∫" ++ showRational t ++ " " ++ show h
 
 ------------------------
 ----  Atomic Weight ----
