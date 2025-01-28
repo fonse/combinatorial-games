@@ -1,6 +1,6 @@
 module Thermograph where
 
-import Data.List (sortBy)
+import Data.List (sortBy, nub)
 import Data.Ord (comparing, Down (Down))
 
 -- A thermograph consists of a left Boundary (where segments decrease in value) and a right Boundary (where segments increase in value)
@@ -27,16 +27,13 @@ calculateThermograph ls rs = Thermograph (truncateBoundaryL meanValue taxedRight
     meanValue = findIntersection taxedRightBoundary taxedLeftBoundary
 
 meanValueT :: Thermograph -> Rational
-meanValueT = lastValue . leftBoundary
-  where
-    lastValue [x] = value x
-    lastValue (x:xs) = lastValue xs
+meanValueT = value . last . leftBoundary
 
 freezingPointT :: Thermograph -> Rational
-freezingPointT thermograph = max (lastTemperature (leftBoundary thermograph)) (lastTemperature (rightBoundary thermograph))
-  where
-    lastTemperature [x] = temp x
-    lastTemperature (x:xs) = lastTemperature xs
+freezingPointT = head . cornersT
+
+cornersT :: Thermograph -> [Rational]
+cornersT thermograph = nub . sortBy (comparing Down) $ temp <$> (leftBoundary thermograph ++ rightBoundary thermograph)
 
 ---------------------------------
 ---- Thermograph Calculation ----

@@ -4,13 +4,14 @@
 module Game where
 
 import Util.List ( filterIfAnotherElementSatisfies, mex )
-import Data.List ( find )
+import Data.List ( find, nub, sortBy )
 import Data.Maybe ( fromJust, fromMaybe, isNothing, isJust )
 import Data.Ratio ( denominator, numerator, (%) )
 import Data.Bits ( Bits(popCount) )
 import qualified Data.MemoCombinators as Memo
 import Control.Monad (guard)
-import Thermograph (Thermograph, coldThermograph, calculateThermograph, meanValueT, freezingPointT)
+import Thermograph (Thermograph, coldThermograph, calculateThermograph, meanValueT, freezingPointT, cornersT)
+import Data.Ord (comparing, Down (Down))
 
 data Game = Game { left :: [Game], right :: [Game] }
 
@@ -195,6 +196,12 @@ heat t g = case toMaybeRational g of
   Just x -> fromRational x
   Nothing -> Game ((+fromRational t) . heat t <$> left g) ((+fromRational (-t)) . heat t <$> right g)
 
+criticalTemperatures :: Game -> [Rational]
+criticalTemperatures = sortBy (comparing Down) . filter (/= 0) . nub . criticalTemperatures'
+
+criticalTemperatures' :: Game -> [Rational]
+criticalTemperatures' g = cornersT (thermograph g) ++ concatMap criticalTemperatures' (left g) ++ concatMap criticalTemperatures' (right g)
+
 ------------------------
 ----  Atomic Weight ----
 ------------------------
@@ -311,7 +318,7 @@ showGeneric (Game ls rs) = "{ " ++ showLeft ++ separator ++ showRight ++ " }"
     showMoves gs = unwords (show <$> gs)
     showLeft = showMoves ls
     showRight = showMoves rs
-    separator 
+    separator
       | '|' `elem` (showLeft ++ showRight) = " ‖ "
       | otherwise = " | "
 
