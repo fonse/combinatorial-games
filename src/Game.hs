@@ -177,8 +177,8 @@ instance Fractional Game where
 ----  Temperature ----
 ----------------------
 type Temperature = Rational
-data HeatedGame = HeatedBy { baseGame :: Game, temp :: Temperature }
-data ThermalDissociation = Thermal { cold :: Game, hot :: [HeatedGame] }
+data HeatedGame = HeatedBy { baseGame :: Game, temp :: Temperature } deriving Eq
+data ThermalDissociation = Thermal { cold :: Game, hot :: [HeatedGame] } deriving Eq
 
 thermograph :: Game -> Thermograph
 thermograph g = case toMaybeRational g of
